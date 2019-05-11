@@ -28,8 +28,6 @@
 #include <pthread.h>
 #include <netinet/in.h>
 
-#include "config/config.h"
-
 #define BUFSIZE			4096
 #define MINIBUF_SIZE		50
 #define VAL(var, type, offset)	*((type *)(var+offset))

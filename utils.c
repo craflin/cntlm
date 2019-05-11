@@ -30,7 +30,6 @@
 #include <ctype.h>
 #include <syslog.h>
 
-#include "config/config.h"
 #include "swap.h"
 #include "utils.h"
 #include "socket.h"

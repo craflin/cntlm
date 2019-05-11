@@ -46,7 +46,6 @@
  * Some helping routines like linked list manipulation substr(), memory
  * allocation, NTLM authentication routines, etc.
  */
-#include "config/config.h"
 #include "socket.h"
 #include "utils.h"
 #include "ntlm.h"

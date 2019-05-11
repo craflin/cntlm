@@ -25,8 +25,6 @@
 #include <netinet/in.h>
 #include <stdint.h>
 
-#include "config/config.h"
-
 #ifndef INADDR_LOOPBACK
 #define INADDR_LOOPBACK 0x7f000001
 #endif
