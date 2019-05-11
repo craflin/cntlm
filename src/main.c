@@ -39,7 +39,7 @@
 #include <pwd.h>
 #include <fcntl.h>
 #include <syslog.h>
-#include <termios.h>
+//#include <termios.h>
 #include <fnmatch.h>
 
 /*
@@ -667,7 +667,7 @@ int main(int argc, char **argv) {
 	char *cpassword, *cpassntlm2, *cpassnt, *cpasslm;
 	char *cuser, *cdomain, *cworkstation, *cuid, *cpidfile, *cauth;
 	struct passwd *pw;
-	struct termios termold, termnew;
+	//struct termios termold, termnew;
 	//pthread_attr_t pattr;
 	pthread_t pthr;
 	hlist_t list;
@@ -1208,23 +1208,11 @@ int main(int argc, char **argv) {
 	}
 
 	/*
-	 * Last chance to get password from the user
+	 * Complain if do not have a password.
 	 */
 	if (interactivehash || magic_detect || (interactivepwd && !ntlmbasic)) {
-		printf("Password: ");
-		tcgetattr(0, &termold);
-		termnew = termold;
-		termnew.c_lflag &= ~(ISIG | ECHO);
-		tcsetattr(0, TCSADRAIN, &termnew);
-		tmp = fgets(cpassword, MINIBUF_SIZE, stdin);
-		tcsetattr(0, TCSADRAIN, &termold);
-		i = strlen(cpassword) - 1;
-		if (cpassword[i] == '\n') {
-			cpassword[i] = 0;
-			if (cpassword[i - 1] == '\r')
-				cpassword[i - 1] = 0;
-		}
-		printf("\n");
+		syslog(LOG_ERR, "Missing password.\n");
+		myexit(1);
 	}
 
 	/*
