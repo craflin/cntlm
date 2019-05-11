@@ -27,10 +27,6 @@
 
 #include "config/config.h"
 
-#if config_socklen_t != 1
-#define socklen_t uint32_t
-#endif
-
 #ifndef INADDR_LOOPBACK
 #define INADDR_LOOPBACK 0x7f000001
 #endif
