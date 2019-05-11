@@ -668,7 +668,7 @@ int main(int argc, char **argv) {
 	char *cuser, *cdomain, *cworkstation, *cuid, *cpidfile, *cauth;
 	struct passwd *pw;
 	struct termios termold, termnew;
-	pthread_attr_t pattr;
+	//pthread_attr_t pattr;
 	pthread_t pthr;
 	hlist_t list;
 	int i, w;
@@ -1552,34 +1552,34 @@ int main(int argc, char **argv) {
 				 * 	inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port));
 				 */
 
-				pthread_attr_init(&pattr);
-				pthread_attr_setstacksize(&pattr, STACK_SIZE);
-#ifndef __CYGWIN__
-				pthread_attr_setguardsize(&pattr, 256);
-#endif
+//				pthread_attr_init(&pattr);
+//				pthread_attr_setstacksize(&pattr, STACK_SIZE);
+//#ifndef __CYGWIN__
+//				pthread_attr_setguardsize(&pattr, 256);
+//#endif
 
 				if (plist_in(proxyd_list, i)) {
 					data = (struct thread_arg_s *)new(sizeof(struct thread_arg_s));
 					data->fd = cd;
 					data->addr = caddr;
 					if (!serialize)
-						tid = pthread_create(&pthr, &pattr, proxy_thread, (void *)data);
+						tid = pthread_create(&pthr, /*&pattr*/NULL, proxy_thread, (void *)data);
 					else
 						proxy_thread((void *)data);
 				} else if (plist_in(socksd_list, i)) {
 					data = (struct thread_arg_s *)new(sizeof(struct thread_arg_s));
 					data->fd = cd;
 					data->addr = caddr;
-					tid = pthread_create(&pthr, &pattr, socks5_thread, (void *)data);
+					tid = pthread_create(&pthr, /*&pattr*/NULL, socks5_thread, (void *)data);
 				} else {
 					data = (struct thread_arg_s *)new(sizeof(struct thread_arg_s));
 					data->fd = cd;
 					data->addr = caddr;
 					data->target = plist_get(tunneld_list, i);
-					tid = pthread_create(&pthr, &pattr, tunnel_thread, (void *)data);
+					tid = pthread_create(&pthr, /*&pattr*/NULL, tunnel_thread, (void *)data);
 				}
 
-				pthread_attr_destroy(&pattr);
+				//pthread_attr_destroy(&pattr);
 
 				if (tid)
 					syslog(LOG_ERR, "Serious error during pthread_create: %d\n", tid);
