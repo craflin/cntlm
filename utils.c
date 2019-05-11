@@ -642,25 +642,6 @@ char *trimr(char *buf) {
 	return buf;
 }
 
-#if config_strdup == 0
-/*
- * Our implementation of non-POSIX strdup()
- */
-char *strdup(const char *src) {
-	size_t len;
-	char *tmp;
-
-	if (!src)
-		return NULL;
-
-	len = strlen(src)+1;
-	tmp = calloc(1, len);
-	memcpy(tmp, src, len-1);
-
-	return tmp;
-}
-#endif
-
 /*
  * More intuitive version of strncpy with string termination
  * from OpenBSD
