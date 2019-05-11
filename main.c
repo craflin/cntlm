@@ -1159,9 +1159,7 @@ int main(int argc, char **argv) {
 	 * Set default value for the workstation. Hostname if possible.
 	 */
 	if (!strlen(cworkstation)) {
-#if config_gethostname == 1
 		gethostname(cworkstation, MINIBUF_SIZE);
-#endif
 		if (!strlen(cworkstation))
 			strlcpy(cworkstation, "cntlm", MINIBUF_SIZE);
 

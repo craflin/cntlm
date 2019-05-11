@@ -156,11 +156,5 @@ extern void to_base64(unsigned char *out, const unsigned char *in, size_t len, s
 extern int from_base64(char *out, const char *in);
 
 extern long int random(void);
-#if config_gethostname == 1
-extern int gethostname(char *name, size_t len);
-#endif
-#ifndef strdup
-extern char *strdup(const char *src);
-#endif
 
 #endif /* _UTILS_H */
