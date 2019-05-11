@@ -708,7 +708,7 @@ int main(int argc, char **argv) {
 
 	openlog("cntlm", LOG_CONS, LOG_DAEMON);
 
-#if config_endian == 0
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 	syslog(LOG_INFO, "Starting cntlm version " VERSION " for BIG endian\n");
 #else
 	syslog(LOG_INFO, "Starting cntlm version " VERSION " for LITTLE endian\n");

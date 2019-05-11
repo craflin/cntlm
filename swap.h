@@ -49,7 +49,7 @@
 		(((uint64_t)(x) & (uint64_t)0x000000000000ff00ULL) << 40) | \
 		(((uint64_t)(x) & (uint64_t)0x00000000000000ffULL) << 56) ))
 
-#if config_endian == 0
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 # define U16LE(x)		swap16(x)
 # define U32LE(x)		swap32(x)
 # define U64LE(x)		swap64(x)
