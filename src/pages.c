@@ -22,9 +22,11 @@
 #ifndef _PAGES_H
 #define _PAGES_H
 
+#include <string.h>
+#include <strings.h>
+#include <stdio.h>
+
 #include "utils.h"
-#include "string.h"
-#include "stdio.h"
 
 char *gen_407_page(const char *http) {
 	char *tmp;

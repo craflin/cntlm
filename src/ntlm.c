@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "ntlm.h"
 #include "swap.h"

@@ -41,7 +41,7 @@
 int acl_add(plist_t *rules, char *spec, enum acl_t acl) {
 	struct in_addr source;
 	network_t *aux;
-	int i, mask = 32;
+	size_t i, mask = 32;
 	char *tmp;
 	
 	if (rules == NULL)

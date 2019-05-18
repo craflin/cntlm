@@ -41,6 +41,8 @@
 #include <syslog.h>
 //#include <termios.h>
 #include <fnmatch.h>
+#include <getopt.h>
+#include <time.h>
 
 /*
  * Some helping routines like linked list manipulation substr(), memory
@@ -366,7 +368,7 @@ void *proxy_thread(void *thread_data) {
 	}
 
 	free(thread_data);
-	close(cd);
+	so_close(cd);
 
 	return NULL;
 }
@@ -426,7 +428,7 @@ void *socks5_thread(void *thread_data) {
 	bs = (unsigned char *)new(10);
 	thost = new(MINIBUF_SIZE);
 	tport = new(MINIBUF_SIZE);
-	r = read(cd, bs, 2);
+	r = so_read(cd, bs, 2);
 	if (r != 2 || bs[0] != 5)
 		goto bailout;
 
@@ -435,7 +437,7 @@ void *socks5_thread(void *thread_data) {
 	 */
 	c = bs[1];
 	auths = (unsigned char *)new(c+1);
-	r = read(cd, auths, c);
+	r = so_read(cd, auths, c);
 	if (r != c)
 		goto bailout;
 
@@ -460,14 +462,14 @@ void *socks5_thread(void *thread_data) {
 	if (found < 0) {
 		bs[0] = 5;
 		bs[1] = 0xFF;
-		w = write(cd, bs, 2);
+		w = so_write(cd, bs, 2);
 		// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
 		if (!w) w = 1;
 		goto bailout;
 	} else {
 		bs[0] = 5;
 		bs[1] = found;
-		w = write(cd, bs, 2);
+		w = so_write(cd, bs, 2);
 	}
 
 	/*
@@ -477,11 +479,11 @@ void *socks5_thread(void *thread_data) {
 		/*
 		 * Check ver and read username len
 		 */
-		r = read(cd, bs, 2);
+		r = so_read(cd, bs, 2);
 		if (r != 2) {
 			bs[0] = 1;
 			bs[1] = 0xFF;		/* Unsuccessful (not supported) */
-			w = write(cd, bs, 2);
+			w = so_write(cd, bs, 2);
 			goto bailout;
 		}
 		c = bs[1];
@@ -490,7 +492,7 @@ void *socks5_thread(void *thread_data) {
 		 * Read username and pass len
 		 */
 		uname = new(c+1);
-		r = read(cd, uname, c+1);
+		r = so_read(cd, uname, c+1);
 		if (r != c+1) {
 			free(uname);
 			goto bailout;
@@ -503,7 +505,7 @@ void *socks5_thread(void *thread_data) {
 		 * Read pass
 		 */
 		upass = new(c+1);
-		r = read(cd, upass, c);
+		r = so_read(cd, upass, c);
 		if (r != c) {
 			free(upass);
 			free(uname);
@@ -526,7 +528,7 @@ void *socks5_thread(void *thread_data) {
 		/*
 		 * Send response
 		 */
-		w = write(cd, bs, 2);
+		w = so_write(cd, bs, 2);
 		free(upass);
 		free(uname);
 
@@ -540,7 +542,7 @@ void *socks5_thread(void *thread_data) {
 	/*
 	 * Read request type
 	 */
-	r = read(cd, bs, 4);
+	r = so_read(cd, bs, 4);
 	if (r != 4)
 		goto bailout;
 
@@ -553,7 +555,7 @@ void *socks5_thread(void *thread_data) {
 		bs[2] = 0;
 		bs[3] = 1;			/* Dummy IPv4 */
 		memset(bs+4, 0, 6);
-		w = write(cd, bs, 10);
+		w = so_write(cd, bs, 10);
 		goto bailout;
 	}
 
@@ -566,14 +568,14 @@ void *socks5_thread(void *thread_data) {
 		c = 4;
 	} else if (bs[3] == 3) {
 		ver = 2;			/* FQDN, get string length */
-		r = read(cd, &c, 1);
+		r = so_read(cd, &c, 1);
 		if (r != 1)
 			goto bailout;
 	} else
 		goto bailout;
 
 	addr = (unsigned char *)new(c+10 + 1);
-	r = read(cd, addr, c);
+	r = so_read(cd, addr, c);
 	if (r != c)
 		goto bailout;
 	addr[c] = 0;
@@ -590,7 +592,7 @@ void *socks5_thread(void *thread_data) {
 	/*
 	 * Read port number and convert to host byte order int
 	 */
-	r = read(cd, &port, 2);
+	r = so_read(cd, &port, 2);
 	if (r != 2)
 		goto bailout;
 
@@ -621,7 +623,7 @@ void *socks5_thread(void *thread_data) {
 		bs[2] = 0;
 		bs[3] = 1;			/* Dummy IPv4 */
 		memset(bs+4, 0, 6);
-		w = write(cd, bs, 10);
+		w = so_write(cd, bs, 10);
 		goto bailout;
 	} else {
 		/*
@@ -632,7 +634,7 @@ void *socks5_thread(void *thread_data) {
 		bs[2] = 0;
 		bs[3] = 1;			/* Dummy IPv4 */
 		memset(bs+4, 0, 6);
-		w = write(cd, bs, 10);
+		w = so_write(cd, bs, 10);
 	}
 
 	syslog(LOG_DEBUG, "%s SOCKS %s", inet_ntoa(caddr.sin_addr), thost);
@@ -656,8 +658,8 @@ bailout:
 	if (tcreds)
 		free(tcreds);
 	if (sd)
-		close(sd);
-	close(cd);
+		so_close(sd);
+	so_close(cd);
 
 	return NULL;
 }
@@ -666,7 +668,9 @@ int main(int argc, char **argv) {
 	char *tmp, *head;
 	char *cpassword, *cpassntlm2, *cpassnt, *cpasslm;
 	char *cuser, *cdomain, *cworkstation, *cuid, *cpidfile, *cauth;
+#ifndef _WIN32
 	struct passwd *pw;
+#endif
 	//struct termios termold, termnew;
 	//pthread_attr_t pattr;
 	pthread_t pthr;
@@ -821,6 +825,7 @@ int main(int argc, char **argv) {
 				 */
 				serialize = 1;
 				break;
+#ifndef _WIN32
 			case 'T':
 				debug = 1;
 				asdaemon = 0;
@@ -835,6 +840,7 @@ int main(int argc, char **argv) {
 					dup2(tracefile, 2);
 				}
 				break;
+#endif
 			case 'U':
 				strlcpy(cuid, optarg, MINIBUF_SIZE);
 				break;
@@ -1322,6 +1328,7 @@ int main(int argc, char **argv) {
 		myexit(1);
 	}
 
+#ifndef _WIN32
 	/*
 	 * Ok, we are ready to rock. If daemon mode was requested,
 	 * fork and die. The child will not be group leader anymore
@@ -1363,7 +1370,9 @@ int main(int argc, char **argv) {
 		openlog("cntlm", LOG_CONS | LOG_PID | LOG_PERROR, LOG_DAEMON);
 		syslog(LOG_INFO, "Cntlm ready, staying in the foreground");
 	}
+#endif
 
+#ifndef _WIN32
 	/*
 	 * Check and change UID.
 	 */
@@ -1396,7 +1405,9 @@ int main(int argc, char **argv) {
 			}
 		}
 	}
+#endif
 
+#ifndef _WIN32
 	/*
 	 * PID file requested? Try to create one (it must not exist).
 	 * If we fail, exit with error.
@@ -1421,21 +1432,24 @@ int main(int argc, char **argv) {
 		free(tmp);
 		close(cd);
 	}
+#endif
 
 	/*
 	 * Change the handler for signals recognized as clean shutdown.
 	 * When the handler is called (termination request), it signals
 	 * this news by adding 1 to the global quit variable.
 	 */
-	signal(SIGPIPE, SIG_IGN);
 	signal(SIGINT, &sighandler);
 	signal(SIGTERM, &sighandler);
+#ifndef _WIN32
+	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP, &sighandler);
+#endif
 
 	/*
 	 * Initialize the random number generator
 	 */
-	srandom(time(NULL));
+	srand((unsigned int)time(NULL));
 
 	/*
 	 * This loop iterates over every connection request on any of
@@ -1524,11 +1538,11 @@ int main(int argc, char **argv) {
 					syslog(LOG_WARNING, "Connection denied for %s:%d\n",
 						inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port));
 					tmp = gen_denied_page(inet_ntoa(caddr.sin_addr));
-					w = write(cd, tmp, strlen(tmp));
+					w = so_write(cd, tmp, strlen(tmp));
 					// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
 					if (!w) w = 1;
 					free(tmp);
-					close(cd);
+					so_close(cd);
 					continue;
 				}
 

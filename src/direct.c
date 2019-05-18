@@ -31,8 +31,6 @@
 #include <netdb.h>
 #include <sys/socket.h>
 
-extern int h_errno;
-
 #include "utils.h"
 #include "globals.h"
 #include "auth.h"
@@ -197,7 +195,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 	if (sd < 0) {
 		syslog(LOG_WARNING, "Connection failed for %s:%d (%s)", request->hostname, request->port, strerror(errno));
 		tmp = gen_502_page(request->http, strerror(errno));
-		w = write(cd, tmp, strlen(tmp));
+		w = so_write(cd, tmp, strlen(tmp));
 		// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
 		if (!w) w = 1;
 		free(tmp);
@@ -217,7 +215,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 		port = request->port;
 	} else {
 		tmp = gen_502_page(request->http, "Invalid request URL");
-		w = write(cd, tmp, strlen(tmp));
+		w = so_write(cd, tmp, strlen(tmp));
 		free(tmp);
 
 		rc = (void *)-1;
@@ -335,11 +333,11 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 				if (hlist_subcmp(data[1]->headers, "Connection", "close")) {
 					if (debug)
 						printf("Reconnect before WWW auth\n");
-					close(sd);
+					so_close(sd);
 					sd = host_connect(data[0]->hostname, data[0]->port);
 					if (sd < 0) {
 						tmp = gen_502_page(data[0]->http, "WWW authentication reconnect failed");
-						w = write(cd, tmp, strlen(tmp));
+						w = so_write(cd, tmp, strlen(tmp));
 						free(tmp);
 
 						rc = (void *)-1;
@@ -351,7 +349,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 						printf("WWW auth connection error.\n");
 
 					tmp = gen_502_page(data[1]->http, data[1]->errmsg ? data[1]->errmsg : "Error during WWW-Authenticate");
-					w = write(cd, tmp, strlen(tmp));
+					w = so_write(cd, tmp, strlen(tmp));
 					free(tmp);
 
 					free_rr_data(data[0]);
@@ -365,7 +363,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 					 * Request basic auth
 					 */
 					tmp = gen_401_page(data[1]->http, data[0]->hostname, data[0]->port);
-					w = write(cd, tmp, strlen(tmp));
+					w = so_write(cd, tmp, strlen(tmp));
 					free(tmp);
 
 					free_rr_data(data[0]);
@@ -435,7 +433,7 @@ bailout:
 	if (hostname)
 		free(hostname);
 
-	close(sd);
+	so_close(sd);
 
 	return rc;
 }
@@ -466,8 +464,8 @@ void direct_tunnel(void *thread_data) {
 
 bailout:
 	free(hostname);
-	close(sd);
-	close(cd);
+	so_close(sd);
+	so_close(cd);
 
 	return;
 }

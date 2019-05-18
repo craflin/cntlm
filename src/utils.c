@@ -190,7 +190,7 @@ int plist_pop(plist_t *list, void **aux) {
 		tmp = t->next;
 
 		if (so_closed(id)) {
-			close(id);
+			so_close(id);
 			if (t->aux)
 				free(t->aux);
 		} else
@@ -478,13 +478,13 @@ void hlist_dump(hlist_t list) {
  * (terminating \x0), return the result in a new memory.
  */
 char *substr(const char *src, int pos, int len) {
-	int l;
+	size_t l;
 	char *tmp;
 
 	if (len == 0)
 		len = strlen(src);
 
-	l = MIN(len, strlen(src)-pos);
+	l = MIN((size_t)len, strlen(src)-pos);
 	if (l <= 0)
 		return new(1);
 
@@ -716,7 +716,7 @@ char *new(size_t size) {
  * Self-explanatory.
  */
 char *lowercase(char *str) {
-	int i;
+	size_t i;
 
 	for (i = 0; i < strlen(str); ++i)
 		str[i] = tolower(str[i]);
@@ -728,7 +728,7 @@ char *lowercase(char *str) {
  * Self-explanatory.
  */
 char *uppercase(char *str) {
-	int i;
+	size_t i;
 
 	for (i = 0; i < strlen(str); ++i)
 		str[i] = toupper(str[i]);
@@ -756,7 +756,7 @@ int unicode(char **dst, char *src) {
 
 char *urlencode(const char *str) {
 	char *tmp;
-	int i, pos;
+	size_t i, pos;
 
 	tmp = new(strlen(str)*3 + 1);
 	for (pos = 0, i = 0; i < strlen(str); ++i) {
@@ -773,7 +773,7 @@ char *urlencode(const char *str) {
 
 char *printmem(char *src, size_t len, int bitwidth) {
 	char *tmp;
-	int i;
+	size_t i;
 
 	tmp = new(2*len+1);
 	for (i = 0; i < len; ++i) {

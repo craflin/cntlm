@@ -60,6 +60,8 @@
  */
 # if __GNUC__ >= 2
 #  define UNALIGNED_P(p) (((uintptr_t) p) % __alignof__ (uint32_t) != 0)
+#elif defined(_MSC_VER)
+#  define UNALIGNED_P(p) (((uintptr_t) p) % __alignof(uint32_t) != 0)
 # else
 #  define alignof(type) offsetof (struct { char c; type x; }, x)
 #  define UNALIGNED_P(p) (((size_t) p) % alignof (uint32_t) != 0)

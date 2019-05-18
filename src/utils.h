@@ -140,6 +140,9 @@ extern char *uppercase(char *str);
 extern int unicode(char **dst, char *src);
 extern char *new(size_t size);
 extern char *urlencode(const char *str);
+#ifdef _WIN32
+#define strtok_r strtok_s
+#endif
 
 extern rr_data_t new_rr_data(void);
 extern rr_data_t copy_rr_data(rr_data_t dst, rr_data_t src);

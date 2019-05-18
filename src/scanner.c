@@ -84,7 +84,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 
 	len = 0;
 	do {
-		size = read(*sd, buf + len, SAMPLE - len - 1);
+		size = so_read(*sd, buf + len, SAMPLE - len - 1);
 		if (debug)
 			printf("scanner_hook: read %d of %d\n", size, SAMPLE - len);
 		if (size > 0)
@@ -152,7 +152,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 						headers_initiated = 1;
 						tmp = new(MINIBUF_SIZE);
 						snprintf(tmp, MINIBUF_SIZE, "%s 200 OK\r\n", request->http);
-						w = write(cd, tmp, strlen(tmp));
+						w = so_write(cd, tmp, strlen(tmp));
 						// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
 						if (!w) w = 1;
 						free(tmp);
@@ -171,7 +171,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 						tmp = new(MINIBUF_SIZE);
 						progress = atol(line+12);
 						snprintf(tmp, MINIBUF_SIZE, "ISA-Scanner: %ld of %ld\r\n", progress, filesize);
-						w = write(cd, tmp, strlen(tmp));
+						w = so_write(cd, tmp, strlen(tmp));
 						free(tmp);
 					}
 
@@ -217,7 +217,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 				} else {
 					if (debug)
 						printf("scanner_hook: Authentication failed or refused!\n");
-					close(nc);
+					so_close(nc);
 					nc = 0;
 				}
 
@@ -225,7 +225,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 				 * The POST request for the real file
 				 */
 				reset_rr_data(newres);
-				if (nc && headers_send(nc, newreq) && write(nc, post, strlen(post)) && headers_recv(nc, newres)) {
+				if (nc && headers_send(nc, newreq) && so_write(nc, post, strlen(post)) && headers_recv(nc, newres)) {
 					if (debug)
 						hlist_dump(newres->headers);
 
@@ -245,7 +245,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 					 */
 					newres->skip_http = headers_initiated;
 					copy_rr_data(response, newres);
-					close(*sd);
+					so_close(*sd);
 					*sd = nc;
 
 					len = 0;
@@ -278,7 +278,7 @@ int scanner_hook(rr_data_t request, rr_data_t response, struct auth_s *credentia
 			return PLUG_ERROR;
 		}
 
-		size = write(cd, buf, len);
+		size = so_write(cd, buf, len);
 		if (size > 0)
 			ok = PLUG_SENDDATA;
 		else

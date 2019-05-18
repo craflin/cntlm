@@ -105,7 +105,7 @@ int proxy_connect(struct auth_s *credentials) {
 		list = connection_list;
 		while (list) {
 			tmp = list->next;
-			close(list->key);
+			so_close(list->key);
 			list = tmp;
 		}
 		plist_free(connection_list);
@@ -193,7 +193,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 	}
 
 	if (!headers_send(*sd, auth)) {
-		close(*sd);
+		so_close(*sd);
 		goto bailout;
 	}
 
@@ -211,7 +211,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 
 	reset_rr_data(auth);
 	if (!headers_recv(*sd, auth)) {
-		close(*sd);
+		so_close(*sd);
 		goto bailout;
 	}
 
@@ -226,7 +226,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 	if (auth->code == 407) {
 		if (!http_body_drop(*sd, auth)) {				// FIXME: if below fails, we should forward what we drop here...
 			rc = 0;
-			close(*sd);
+			so_close(*sd);
 			goto bailout;
 		}
 		tmp = hlist_get(auth->headers, "Proxy-Authenticate");
@@ -243,13 +243,13 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 				} else {
 					syslog(LOG_ERR, "No target info block. Cannot do NTLMv2!\n");
 					free(challenge);
-					close(*sd);
+					so_close(*sd);
 					goto bailout;
 				}
 			} else {
 				syslog(LOG_ERR, "Proxy returning invalid challenge!\n");
 				free(challenge);
-				close(*sd);
+				so_close(*sd);
 				goto bailout;
 			}
 
@@ -264,7 +264,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 			response->code = 407;				// See explanation above
 		if (!http_body_drop(*sd, auth)) {
 			rc = 0;
-			close(*sd);
+			so_close(*sd);
 			goto bailout;
 		}
 	}
@@ -275,7 +275,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 	if (so_closed(*sd)) {
 		if (debug)
 			printf("Proxy closed on us, reconnect.\n");
-		close(*sd);
+		so_close(*sd);
 		*sd = proxy_connect(credentials);
 		if (*sd < 0) {
 			rc = 0;
@@ -375,7 +375,7 @@ beginning:
 		sd = proxy_connect(tcreds);
 		if (sd < 0) {
 			tmp = gen_502_page(request->http, "Parent proxy unreacheable");
-			i = write(cd, tmp, strlen(tmp));
+			i = so_write(cd, tmp, strlen(tmp));
 			free(tmp);
 			rc = (void *)-1;
 			goto bailout;
@@ -490,7 +490,7 @@ shortcut:
 						printf("NTLM-to-basic: Returning client auth request.\n");
 
 					tmp = gen_407_page(data[loop]->http);
-					i = write(cd, tmp, strlen(tmp));
+					i = so_write(cd, tmp, strlen(tmp));
 					free(tmp);
 
 					free_rr_data(data[0]);
@@ -581,7 +581,7 @@ shortcut:
 				retry = 1;
 				request = data[0];
 				free_rr_data(data[1]);
-				close(sd);
+				so_close(sd);
 				goto beginning;
 			}
 
@@ -726,7 +726,7 @@ bailout:
 		pthread_mutex_unlock(&connection_mtx);
 	} else {
 		free(tcreds);
-		close(sd);
+		so_close(sd);
 	}
 
 	return rc;
@@ -834,8 +834,8 @@ void forward_tunnel(void *thread_data) {
 		tunnel(cd, sd);
 
 bailout:
-	close(sd);
-	close(cd);
+	so_close(sd);
+	so_close(cd);
 	free(tcreds);
 
 	return;
@@ -900,7 +900,7 @@ void magic_auth_detect(const char *url) {
 			printf("\nConnection to proxy failed, bailing out\n");
 			free_rr_data(res);
 			free_rr_data(req);
-			close(nc);
+			so_close(nc);
 			if (host)
 				free(host);
 			return;
@@ -912,7 +912,7 @@ void magic_auth_detect(const char *url) {
 			printf("Auth not required (HTTP code: %d)\n", res->code);
 			free_rr_data(res);
 			free_rr_data(req);
-			close(nc);
+			so_close(nc);
 			continue;
 		}
 
@@ -935,7 +935,7 @@ void magic_auth_detect(const char *url) {
 					found = i;
 					free_rr_data(res);
 					free_rr_data(req);
-					close(nc);
+					so_close(nc);
 					break;
 				}
 			}
@@ -943,7 +943,7 @@ void magic_auth_detect(const char *url) {
 
 		free_rr_data(res);
 		free_rr_data(req);
-		close(nc);
+		so_close(nc);
 	}
 
 	if (found > -1) {

@@ -34,6 +34,7 @@
 #include <syslog.h>
 
 #include "utils.h"
+#include "socket.h"
 
 extern int debug;
 
@@ -93,7 +94,7 @@ int so_resolv(struct in_addr *host, const char *name) {
  * Returns: socket descriptor
  */
 int so_connect(struct in_addr host, int port) {
-	int flags, fd, rc;
+	int /*flags,*/ fd, rc;
 	struct sockaddr_in saddr;
 	// struct timeval tv;
 	// fd_set fds;
@@ -109,12 +110,14 @@ int so_connect(struct in_addr host, int port) {
 	saddr.sin_port = htons(port);
 	saddr.sin_addr = host;
 
+    /*
 	if ((flags = fcntl(fd, F_GETFL, 0)) < 0) {
 		if (debug)
 			printf("so_connect: get flags: %s\n", strerror(errno));
 		close(fd);
 		return -1;
 	}
+    */
 
 	/* NON-BLOCKING connect with timeout
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
@@ -143,16 +146,18 @@ int so_connect(struct in_addr host, int port) {
 	if (rc < 0) {
 		if (debug)
 			printf("so_connect: %s\n", strerror(errno));
-		close(fd);
+		so_close(fd);
 		return -1;
 	}
 
+    /*
 	if (fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) < 0) {
 		if (debug)
 			printf("so_connect: set blocking: %s\n", strerror(errno));
 		close(fd);
 		return -1;
 	}
+    */
 
 	return fd;
 }
@@ -170,12 +175,12 @@ int so_listen(int port, struct in_addr source) {
 	if (fd < 0) {
 		if (debug)
 			printf("so_listen: new socket: %s\n", strerror(errno));
-		close(fd);
+		so_close(fd);
 		return -1;
 	}
 
 	clen = 1;
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &clen, sizeof(clen));
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&clen, sizeof(clen));
 	memset((void *)&saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
 	saddr.sin_port = htons(port);
@@ -183,12 +188,12 @@ int so_listen(int port, struct in_addr source) {
 
 	if (bind(fd, (struct sockaddr *)&saddr, sizeof(saddr))) {
 		syslog(LOG_ERR, "Cannot bind port %d: %s!\n", port, strerror(errno));
-		close(fd);
+		so_close(fd);
 		return -1;
 	}
 
 	if (listen(fd, SOMAXCONN)) {
-		close(fd);
+		so_close(fd);
 		return -1;
 	}
 
@@ -203,7 +208,18 @@ int so_listen(int port, struct in_addr source) {
 int so_recvtest(int fd) {
 	char buf;
 	int i;
-#ifndef MSG_DONTWAIT
+#ifdef _WIN32
+    fd_set rds;
+    FD_ZERO(&rds);
+    FD_SET(fd, &rds);
+    struct timeval tv = {0};
+    if(select(0, &rds, NULL, NULL, &tv) != 1)
+    {
+        WSASetLastError(WSAEWOULDBLOCK);
+        return -1;
+    }
+	i = recv(fd, &buf, 1, MSG_PEEK);
+#elif !defined(MSG_DONTWAIT)
 	unsigned int flags;
 
 	flags = fcntl(fd, F_GETFL);
@@ -220,9 +236,11 @@ int so_recvtest(int fd) {
 /*
  * Return true if there are some data on the socket
  */
+/*
 int so_dataready(int fd) {
 	return so_recvtest(fd) > 0;
 }
+*/
 
 /*
  * Reliable way of finding out whether a connection was closed
@@ -256,7 +274,7 @@ int so_recvln(int fd, char **buf, int *size) {
 	char *tmp;
 
 	while (len < *size-1 && c != '\n') {
-		r = read(fd, &c, 1);
+		r = so_read(fd, &c, 1);
 		if (r <= 0)
 			break;
 
@@ -279,5 +297,28 @@ int so_recvln(int fd, char **buf, int *size) {
 	(*buf)[len] = 0;
 
 	return r;
+}
+
+int so_read(int fd,  void *buf, int len)
+{
+    return recv(fd, buf, len, 0);
+}
+
+int so_write(int fd,  const void *buf, int len)
+{
+#ifndef _WIN32
+    return send(fd, buf, len, MSG_NOSIGNAL);
+#else
+    return send(fd, buf, len, 0);
+#endif
+}
+
+int so_close(int fd)
+{
+#ifndef _WIN32
+    return close(fd);
+#else
+    return closesocket(fd);
+#endif
 }
 
