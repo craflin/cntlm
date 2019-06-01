@@ -684,9 +684,11 @@ int main(int argc, char **argv) {
 	int tj = 0;
 	int interactivepwd = 0;
 	int interactivehash = 0;
-	int tracefile = 0;
-	int cflags = 0;
 	int asdaemon = 1;
+	int cflags = 0;
+#ifndef _WIN32
+	int tracefile = 0;
+#endif
 	char *myconfig = NULL;
 	plist_t tunneld_list = NULL;
 	plist_t proxyd_list = NULL;
@@ -715,7 +717,11 @@ int main(int argc, char **argv) {
 	syslog(LOG_INFO, "Starting cntlm version " VERSION " for LITTLE endian\n");
 #endif
 
+#ifdef _WIN32
+	while ((i = getopt(argc, argv, ":-:a:c:d:ghIl:p:r:su:vw:A:BD:F:G:HL:M:N:O:R:S:U:")) != -1) {
+#else
 	while ((i = getopt(argc, argv, ":-:T:a:c:d:fghIl:p:r:su:vw:A:BD:F:G:HL:M:N:O:P:R:S:U:")) != -1) {
+#endif
 		switch (i) {
 			case 'A':
 			case 'D':
@@ -737,9 +743,11 @@ int main(int argc, char **argv) {
 			case 'F':
 				cflags = swap32(strtoul(optarg, &tmp, 0));
 				break;
+#ifndef _WIN32
 			case 'f':
 				asdaemon = 0;
 				break;
+#endif
 			case 'G':
 				if (strlen(optarg)) {
 					scanner_plugin = 1;
@@ -783,9 +791,11 @@ int main(int argc, char **argv) {
 			case 'O':
 				listen_add("SOCKS5 proxy", &socksd_list, optarg, gateway);
 				break;
+#ifndef _WIN32
 			case 'P':
 				strlcpy(cpidfile, optarg, MINIBUF_SIZE);
 				break;
+#endif
 			case 'p':
 				/*
 				 * Overwrite the password parameter with '*'s to make it
@@ -838,10 +848,10 @@ int main(int argc, char **argv) {
 					dup2(tracefile, 2);
 				}
 				break;
-#endif
 			case 'U':
 				strlcpy(cuid, optarg, MINIBUF_SIZE);
 				break;
+#endif
 			case 'u':
 				i = strcspn(optarg, "@");
 				if (i != strlen(optarg)) {
@@ -911,8 +921,10 @@ int main(int argc, char **argv) {
 				"\t    List of URL's to serve direcly as stand-alone proxy (e.g. '*.local')\n");
 		fprintf(stderr, "\t-O  [<saddr>:]<lport>\n"
 				"\t    Enable SOCKS5 proxy on port lport (binding to address saddr)\n");
+#ifndef _WIN32
 		fprintf(stderr, "\t-P  <pidfile>\n"
 				"\t    Create a PID file upon successful start.\n");
+#endif
 		fprintf(stderr, "\t-p  <password>\n"
 				"\t    Account password. Will not be visible in \"ps\", /proc, etc.\n");
 		fprintf(stderr, "\t-r  \"HeaderName: value\"\n"
@@ -921,11 +933,13 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "\t-S  <size_in_kb>\n"
 				"\t    Enable automation of GFI WebMonitor ISA scanner for files < size_in_kb.\n");
 		fprintf(stderr, "\t-s  Do not use threads, serialize all requests - for debugging only.\n");
+#ifndef _WIN32
 		fprintf(stderr, "\t-T  <file.log>\n"
 				"\t    Redirect all debug information into a trace file for support upload.\n"
 				"\t    MUST be the first argument on the command line, implies -v.\n");
 		fprintf(stderr, "\t-U  <uid>\n"
 				"\t    Run as uid. It is an important security measure not to run as root.\n");
+#endif
 		fprintf(stderr, "\t-u  <user>[@<domain]\n"
 				"\t    Domain/workgroup can be set separately.\n");
 		fprintf(stderr, "\t-v  Print debugging information.\n");
