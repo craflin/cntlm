@@ -1539,7 +1539,7 @@ int main(int argc, char **argv) {
 				cd = accept(i, (struct sockaddr *)&caddr, (socklen_t *)&clen);
 
 				if (cd < 0) {
-					syslog(LOG_ERR, "Serious error during accept: %s\n", strerror(errno));
+					syslog(LOG_ERR, "Serious error during accept: %s\n", so_strerror(so_errno));
 					continue;
 				}
 
@@ -1595,7 +1595,7 @@ int main(int argc, char **argv) {
 					tc++;
 			}
 		} else if (cd < 0 && !quit)
-			syslog(LOG_ERR, "Serious error during select: %s\n", strerror(errno));
+			syslog(LOG_ERR, "Serious error during select: %s\n", so_strerror(so_errno));
 
 		if (threads_list) {
 			pthread_mutex_lock(&threads_mtx);

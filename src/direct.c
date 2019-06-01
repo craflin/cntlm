@@ -27,7 +27,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <strings.h>
-#include <errno.h>
 #include <netdb.h>
 #include <sys/socket.h>
 
@@ -43,10 +42,7 @@
 int host_connect(const char *hostname, int port) {
 	struct in_addr addr;
 
-	errno = 0;
 	if (!so_resolv(&addr, hostname)) {
-		//if (debug)
-		//	printf("so_resolv: %s failed (%d: %s)\n", hostname, h_errno, hstrerror(h_errno));
 		return -1;
 	}
 
@@ -193,8 +189,8 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 
 	sd = host_connect(request->hostname, request->port);
 	if (sd < 0) {
-		syslog(LOG_WARNING, "Connection failed for %s:%d (%s)", request->hostname, request->port, strerror(errno));
-		tmp = gen_502_page(request->http, strerror(errno));
+		syslog(LOG_WARNING, "Connection failed for %s:%d (%s)", request->hostname, request->port, so_strerror(so_errno));
+		tmp = gen_502_page(request->http, so_strerror(so_errno));
 		w = so_write(cd, tmp, strlen(tmp));
 		// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
 		if (!w) w = 1;

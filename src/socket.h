@@ -38,5 +38,8 @@ extern int so_recvln(int fd, char **buf, int *size);
 extern int so_read(int fd,  void *buf, int len);
 extern int so_write(int fd,  const void *buf, int len);
 extern int so_close(int fd);
+extern const char* so_strerror(int errnum);
+extern int so_geterrno();
+#define so_errno so_geterrno()
 
 #endif /* _SOCKET_H */

@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "utils.h"
 #include "socket.h"
@@ -352,7 +351,7 @@ int data_send(int dst, int src, length_t len) {
 			c += i;
 
 		if (dst >= 0 && debug)
-			printf("data_send: read %d of %d / %d of %lld (errno = %s)\n", i, block, c, len, i < 0 ? strerror(errno) : "ok");
+			printf("data_send: read %d of %d / %d of %lld (errno = %s)\n", i, block, c, len, i < 0 ? so_strerror(so_errno) : "ok");
 
 		if (dst >= 0 && so_closed(dst)) {
 			i = -999;

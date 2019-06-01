@@ -24,7 +24,9 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifndef _WIN32
 #include <errno.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,7 +91,7 @@ int so_connect(struct in_addr host, int port) {
 
 	if ((fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		if (debug)
-			printf("so_connect: create: %s\n", strerror(errno));
+			printf("so_connect: create: %s\n", so_strerror(so_errno));
 		return -1;
 	}
 
@@ -101,7 +103,7 @@ int so_connect(struct in_addr host, int port) {
 	rc = connect(fd, (struct sockaddr *)&saddr, sizeof(saddr));
 	if (rc < 0) {
 		if (debug)
-			printf("so_connect: %s\n", strerror(errno));
+			printf("so_connect: %s\n", so_strerror(so_errno));
 		so_close(fd);
 		return -1;
 	}
@@ -121,7 +123,7 @@ int so_listen(int port, struct in_addr source) {
 	fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (fd < 0) {
 		if (debug)
-			printf("so_listen: new socket: %s\n", strerror(errno));
+			printf("so_listen: new socket: %s\n", so_strerror(so_errno));
 		so_close(fd);
 		return -1;
 	}
@@ -134,7 +136,7 @@ int so_listen(int port, struct in_addr source) {
 	saddr.sin_addr.s_addr = source.s_addr;
 
 	if (bind(fd, (struct sockaddr *)&saddr, sizeof(saddr))) {
-		syslog(LOG_ERR, "Cannot bind port %d: %s!\n", port, strerror(errno));
+		syslog(LOG_ERR, "Cannot bind port %d: %s!\n", port, so_strerror(so_errno));
 		so_close(fd);
 		return -1;
 	}
@@ -191,7 +193,11 @@ int so_closed(int fd) {
 		return 1;
 
 	i = so_recvtest(fd);
-	return (i == 0 || (i == -1 && errno != EAGAIN && errno != ENOENT));   /* ENOENT, you ask? Perhap AIX devels could explain! :-( */
+#ifdef _WIN32
+	return (i == 0 || (i == -1 && so_errno != WSAWOULDBLOCK));
+#else
+	return (i == 0 || (i == -1 && so_errno != EAGAIN && so_errno != ENOENT));   /* ENOENT, you ask? Perhap AIX devels could explain! :-( */
+#endif
 }
 
 /*
@@ -257,5 +263,23 @@ int so_close(int fd)
     return close(fd);
 #else
     return closesocket(fd);
+#endif
+}
+
+const char* so_strerror(int errnum)
+{
+#ifdef _WIN32
+	return "";
+#else
+	return strerror(errnum);
+#endif
+}
+
+int so_geterrno()
+{
+#ifdef _WIN32
+	return WSAGetLastError();
+#else
+	return errno;
 #endif
 }
