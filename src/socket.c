@@ -42,16 +42,6 @@ extern int debug;
  * gethostbyname() wrapper. Return 1 if OK, otherwise 0.
  */
 int so_resolv(struct in_addr *host, const char *name) {
-/*
-	struct hostent *resolv;
-
-	resolv = gethostbyname(name);
-	if (!resolv)
-		return 0;
-
-	memcpy(host, resolv->h_addr_list[0], resolv->h_length);
-	return 1;
-*/
 	struct addrinfo hints, *res, *p;
 
 	memset(&hints, 0, sizeof(hints));
@@ -94,10 +84,8 @@ int so_resolv(struct in_addr *host, const char *name) {
  * Returns: socket descriptor
  */
 int so_connect(struct in_addr host, int port) {
-	int /*flags,*/ fd, rc;
+	int fd, rc;
 	struct sockaddr_in saddr;
-	// struct timeval tv;
-	// fd_set fds;
 
 	if ((fd = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
 		if (debug)
@@ -110,54 +98,13 @@ int so_connect(struct in_addr host, int port) {
 	saddr.sin_port = htons(port);
 	saddr.sin_addr = host;
 
-    /*
-	if ((flags = fcntl(fd, F_GETFL, 0)) < 0) {
-		if (debug)
-			printf("so_connect: get flags: %s\n", strerror(errno));
-		close(fd);
-		return -1;
-	}
-    */
-
-	/* NON-BLOCKING connect with timeout
-	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-		if (debug)
-			printf("so_connect: set non-blocking: %s\n", strerror(errno));
-		close(fd);
-		return -1;
-	}
-	*/
-
 	rc = connect(fd, (struct sockaddr *)&saddr, sizeof(saddr));
-
-	/*
-	printf("connect = %d\n", rc);
-	if (rc < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINPROGRESS)) {
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		tv.tv_sec = 10;
-		tv.tv_usec = 0;
-		printf("select!\n");
-		rc = select(fd+1, NULL, &fds, NULL, &tv) - 1;
-		printf("select = %d\n", rc);
-	}
-	*/
-
 	if (rc < 0) {
 		if (debug)
 			printf("so_connect: %s\n", strerror(errno));
 		so_close(fd);
 		return -1;
 	}
-
-    /*
-	if (fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) < 0) {
-		if (debug)
-			printf("so_connect: set blocking: %s\n", strerror(errno));
-		close(fd);
-		return -1;
-	}
-    */
 
 	return fd;
 }
@@ -232,15 +179,6 @@ int so_recvtest(int fd) {
 
 	return i;
 }
-
-/*
- * Return true if there are some data on the socket
- */
-/*
-int so_dataready(int fd) {
-	return so_recvtest(fd) > 0;
-}
-*/
 
 /*
  * Reliable way of finding out whether a connection was closed
@@ -321,4 +259,3 @@ int so_close(int fd)
     return closesocket(fd);
 #endif
 }
-
