@@ -61,8 +61,6 @@
 #include "forward.h"				/* code serving via parent proxy */
 #include "direct.h"				/* code serving directly without proxy */
 
-#define STACK_SIZE	sizeof(void *)*8*1024
-
 /*
  * Global "read-only" data initialized in main(). Comments list funcs. which use
  * them. Having these global avoids the need to pass them to each thread and
@@ -1553,12 +1551,6 @@ int main(int argc, char **argv) {
 				 * 	syslog(LOG_INFO, "Connection accepted from %s:%d\n",
 				 * 	inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port));
 				 */
-
-//				pthread_attr_init(&pattr);
-//				pthread_attr_setstacksize(&pattr, STACK_SIZE);
-//#ifndef __CYGWIN__
-//				pthread_attr_setguardsize(&pattr, 256);
-//#endif
 
 				if (plist_in(proxyd_list, i)) {
 					data = (struct thread_arg_s *)new(sizeof(struct thread_arg_s));
