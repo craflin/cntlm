@@ -85,7 +85,7 @@ int so_resolv(struct in_addr *host, const char *name) {
 
 	freeaddrinfo(res);
 
-	return 1;
+	return addr_set;
 }
 
 /*
