@@ -36,8 +36,6 @@ extern struct auth_s *g_creds;			/* global NTLM credentials */
 
 extern int ntlmbasic;				/* forward_request() */
 extern int serialize;
-extern int scanner_plugin;
-extern long scanner_plugin_maxsize;
 
 extern plist_t threads_list;
 extern pthread_mutex_t threads_mtx;

@@ -35,7 +35,6 @@
 #include "socket.h"
 #include "ntlm.h"
 #include "forward.h"
-#include "scanner.h"
 #include "pages.h"
 
 int parent_curr = 0;
@@ -323,7 +322,7 @@ bailout:
  * request is NOT freed
  */
 rr_data_t forward_request(void *thread_data, rr_data_t request) {
-	int i, loop, plugin, retry = 0;
+	int i, loop, retry = 0;
 	int *rsocket[2], *wsocket[2];
 	rr_data_t data[2], rc = NULL;
 	hlist_t tl;
@@ -593,17 +592,6 @@ shortcut:
 				authok = 1;
 
 			/*
-			 * This is to make the ISA AV scanner bullshit transparent. If the page
-			 * returned is scan-progress-html-fuck instead of requested file/data, parse
-			 * it, wait for completion, make a new request to ISA for the real data and
-			 * substitute the result for the original response html-fuck response.
-			 */
-			plugin = PLUG_ALL;
-			if (loop == 1 && scanner_plugin) {
-				plugin = scanner_hook(data[0], data[1], tcreds, *wsocket[loop], rsocket[loop], scanner_plugin_maxsize);
-			}
-
-			/*
 			 * Check if we should loop for another request.  Required for keep-alive
 			 * connections, client might really need a non-interrupted conversation.
 			 *
@@ -631,29 +619,6 @@ shortcut:
 				}
 			}
 
-			if (plugin & PLUG_SENDHEAD) {
-				if (debug) {
-					printf("Sending headers (%d)...\n", *wsocket[loop]);
-					if (loop == 0) {
-						printf("HEAD: %s %s %s\n", data[loop]->method, data[loop]->url, data[loop]->http);
-						hlist_dump(data[loop]->headers);
-					}
-				}
-
-				/*
-				 * Forward client's headers to the proxy and vice versa; proxy_authenticate()
-				 * might have by now prepared 1st and 2nd auth steps and filled our headers with
-				 * the 3rd, final, NTLM message.
-				 */
-				if (!headers_send(*wsocket[loop], data[loop])) {
-					free_rr_data(data[0]);
-					free_rr_data(data[1]);
-					rc = (void *)-1;
-					/* error page */
-					goto bailout;
-				}
-			}
-
 			/*
 			 * Was the request CONNECT and proxy agreed?
 			 */
@@ -666,15 +631,6 @@ shortcut:
 				free_rr_data(data[1]);
 				rc = (void *)-1;
 				goto bailout;
-			}
-
-			if (plugin & PLUG_SENDDATA) {
-				if (!http_body_send(*wsocket[loop], *rsocket[loop], data[0], data[1])) {
-					free_rr_data(data[0]);
-					free_rr_data(data[1]);
-					rc = (void *)-1;
-					goto bailout;
-				}
 			}
 
 			/*

@@ -11,7 +11,6 @@ add_executable(cntlm
     main.c
     ntlm.c
     pages.c
-    scanner.c
     socket.c
     utils.c
     xcrypt.c
@@ -24,7 +23,6 @@ add_executable(cntlm
     http.h
     ntlm.h
     pages.h
-    scanner.h
     socket.h
     swap.h
     utils.h

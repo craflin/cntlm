@@ -73,8 +73,6 @@ struct auth_s *g_creds = NULL;			/* throughout the whole module */
 int quit = 0;					/* sighandler() */
 int ntlmbasic = 0;				/* forward_request() */
 int serialize = 0;
-int scanner_plugin = 0;
-long scanner_plugin_maxsize = 0;
 
 /*
  * List of finished threads. Each forward_request() thread adds itself to it when
@@ -748,17 +746,6 @@ int main(int argc, char **argv) {
 				asdaemon = 0;
 				break;
 #endif
-			case 'G':
-				if (strlen(optarg)) {
-					scanner_plugin = 1;
-					if (!scanner_plugin_maxsize)
-						scanner_plugin_maxsize = 1;
-					i = strlen(optarg) + 3;
-					tmp = new(i);
-					snprintf(tmp, i, "*%s*", optarg);
-					scanner_agent_list = plist_add(scanner_agent_list, 0, tmp);
-				}
-				break;
 			case 'g':
 				gateway = 1;
 				break;
@@ -822,10 +809,6 @@ int main(int argc, char **argv) {
 						get_http_header_name(optarg),
 						get_http_header_value(optarg),
 						HLIST_NOALLOC, HLIST_NOALLOC);
-				break;
-			case 'S':
-				scanner_plugin = 1;
-				scanner_plugin_maxsize = atol(optarg);
 				break;
 			case 's':
 				/*
@@ -905,8 +888,6 @@ int main(int argc, char **argv) {
 #endif
 		fprintf(stderr, "\t-F  <flags>\n"
 				"\t    NTLM authentication flags.\n");
-		fprintf(stderr, "\t-G  <pattern>\n"
-				"\t    User-Agent matching for the trans-isa-scan plugin.\n");
 		fprintf(stderr, "\t-g  Gateway mode - listen on all interfaces, not only loopback.\n");
 		fprintf(stderr, "\t-H  Print password hashes for use in config file (NTLMv2 needs -u and -d).\n");
 		fprintf(stderr, "\t-h  Print this help info along with version number.\n");
@@ -932,8 +913,6 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "\t-r  \"HeaderName: value\"\n"
 				"\t    Add a header substitution. All such headers will be added/replaced\n"
 				"\t    in the client's requests.\n");
-		fprintf(stderr, "\t-S  <size_in_kb>\n"
-				"\t    Enable automation of GFI WebMonitor ISA scanner for files < size_in_kb.\n");
 		fprintf(stderr, "\t-s  Do not use threads, serialize all requests - for debugging only.\n");
 #ifndef _WIN32
 		fprintf(stderr, "\t-T  <file.log>\n"
@@ -1114,14 +1093,6 @@ int main(int argc, char **argv) {
 			cflags = swap32(strtoul(tmp, NULL, 0));
 		free(tmp);
 
-		tmp = new(MINIBUF_SIZE);
-		CFG_DEFAULT(cf, "ISAScannerSize", tmp, MINIBUF_SIZE);
-		if (!scanner_plugin_maxsize && strlen(tmp)) {
-			scanner_plugin = 1;
-			scanner_plugin_maxsize = atoi(tmp);
-		}
-		free(tmp);
-
 		while ((tmp = config_pop(cf, "NoProxy"))) {
 			if (strlen(tmp)) {
 				noproxy_list = noproxy_add(noproxy_list, tmp);
@@ -1137,23 +1108,6 @@ int main(int argc, char **argv) {
 				head[0] = 0;
 				users_list = hlist_add(users_list, tmp, head+1, HLIST_ALLOC, HLIST_ALLOC);
 			}
-		}
-					
-
-		/*
-		 * Add User-Agent matching patterns.
-		 */
-		while ((tmp = config_pop(cf, "ISAScannerAgent"))) {
-			scanner_plugin = 1;
-			if (!scanner_plugin_maxsize)
-				scanner_plugin_maxsize = 1;
-
-			if ((i = strlen(tmp))) {
-				head = new(i + 3);
-				snprintf(head, i+3, "*%s*", tmp);
-				scanner_agent_list = plist_add(scanner_agent_list, 0, head);
-			}
-			free(tmp);
 		}
 
 		/*
