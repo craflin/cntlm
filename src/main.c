@@ -900,7 +900,9 @@ int main(int argc, char **argv) {
 				"\t    ACL deny rule. Syntax same as -A.\n");
 		fprintf(stderr, "\t-d  <domain>\n"
 				"\t    Domain/workgroup can be set separately.\n");
+#ifndef _WIN32
 		fprintf(stderr, "\t-f  Run in foreground, do not fork into daemon mode.\n");
+#endif
 		fprintf(stderr, "\t-F  <flags>\n"
 				"\t    NTLM authentication flags.\n");
 		fprintf(stderr, "\t-G  <pattern>\n"

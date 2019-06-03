@@ -1,6 +1,8 @@
 
 #include <pthread.h>
 
+#include <unordered_map>
+
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -21,15 +23,15 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         {
             for (;;)
             {
-                WaitForSingleObject(eventHandle);
+                WaitForSingleObject(eventHandle, INFINITE);
                 if (lockHandle == (void*)1)
                 {
-                    CloseEvent(eventHandle);
+                    CloseHandle(eventHandle);
                     return 0;
                 }
 
                 ResetEvent(eventHandle);
-                exchangeResult = InterlockedExchangePointer(eventHandle);
+                exchangeResult = InterlockedExchangePointer(&mutex->handle, eventHandle);
                 SetEvent(lockHandle);
                 lockHandle = exchangeResult;
             }
@@ -39,7 +41,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
             lockHandle = InterlockedCompareExchangePointer(&mutex->handle, (void*)1, 0);
             if (lockHandle == 0)
             {
-                CloseEvent(eventHandle);
+                CloseHandle(eventHandle);
                 return 0;
             }
         }
@@ -48,7 +50,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     }
 }
 
-int pthread_mutex_unlock(pthread_mutex_t *mutex);
+int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
     void* exchangeResult;
     void* lockHandle = mutex->handle;
@@ -75,51 +77,66 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex);
 }
 
 namespace {
-    struct thread_data
+    struct ThreadData
     {
         HANDLE hThread;
-        void* (*start_routine)(void*)
+        void* (*start_routine)(void*);
         void* arg;
         void* result;
     };
-    __declspec(thread) thread_data* _threadData = NULL;
+
     DWORD WINAPI pthread_proc(_In_ LPVOID lpParameter)
     {
-        thread_data* threadData = (thread_data*)lpParameter;
+        ThreadData* threadData = (ThreadData*)lpParameter;
         threadData->hThread = GetCurrentThread();
-        _threadData = threadData;
-        threadData->result = thread->start_routine(threadData->arg);
-        _threadData = NULL;
+        threadData->result = threadData->start_routine(threadData->arg);
         return 0;
     }
+
+    pthread_mutex_t _threadsMutex = PTHREAD_MUTEX_INITIALIZER;
+    std::unordered_map<DWORD, ThreadData*> _threads;
 }
 
 pthread_t pthread_self(void)
 {
-    return (pthread_t*)_threadData;
+    return GetCurrentThreadId();
 }
 
 int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void* (*start_routine)(void*), void* arg)
 {
-    thread_data* threadData = new thread_data;
-    HANDLE hThread = CreateThread(NULL, 0, &pthread_proc, threadData, 0, NULL);
+    ThreadData* threadData = new ThreadData;
+    DWORD threadId;
+    HANDLE hThread = CreateThread(NULL, 0, &pthread_proc, threadData, 0, &threadId);
     if (!hThread)
     {
         delete threadData;
         return -1;
     }
     threadData->hThread = hThread;
+    {
+        pthread_mutex_lock(&_threadsMutex);
+        _threads.insert(std::make_pair(threadId, threadData));
+        pthread_mutex_unlock(&_threadsMutex);
+    }
     return 0;
 }
 
 int pthread_join(pthread_t thread, void** retval)
 {
-    thread_data* threadData = (thread_data*)thread;
-    WaitForSingleObject(thradData->hThread);
-    CloseHandle(thradData->hThread);
+    ThreadData* threadData;
+    {
+        pthread_mutex_lock(&_threadsMutex);
+        std::unordered_map<DWORD, ThreadData*>::iterator it = _threads.find(thread);
+        threadData = it->second;
+        _threads.erase(it);
+        pthread_mutex_unlock(&_threadsMutex);
+    }
+    WaitForSingleObject(threadData->hThread, INFINITE);
+    CloseHandle(threadData->hThread);
     if (retval)
         *retval = threadData->result;
     delete threadData;
+    return 0;
 }
 
 }

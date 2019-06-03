@@ -194,7 +194,7 @@ int so_closed(int fd) {
 
 	i = so_recvtest(fd);
 #ifdef _WIN32
-	return (i == 0 || (i == -1 && so_errno != WSAWOULDBLOCK));
+	return (i == 0 || (i == -1 && so_errno != WSAEWOULDBLOCK));
 #else
 	return (i == 0 || (i == -1 && so_errno != EAGAIN && so_errno != ENOENT));   /* ENOENT, you ask? Perhap AIX devels could explain! :-( */
 #endif

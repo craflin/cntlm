@@ -12,7 +12,7 @@ typedef struct
 
 #define PTHREAD_MUTEX_INITIALIZER {0}
 
-typedef void* pthread_t;
+typedef unsigned long pthread_t;
 typedef int pthread_attr_t;
 
 int pthread_mutex_lock(pthread_mutex_t* mutex);
