@@ -30,8 +30,14 @@ add_executable(cntlm
 )
 
 target_compile_definitions(cntlm
-    PRIVATE VERSION="${PROJECT_VERSION}"
+    PRIVATE "VERSION=\"${PROJECT_VERSION}\""
 )
+
+if(NOT WIN32)
+    target_compile_definitions(cntlm
+        PRIVATE "SYSCONFDIR=\"/etc\""
+    )
+endif()
 
 if(MSVC)
     target_sources(cntlm PRIVATE

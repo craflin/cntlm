@@ -931,9 +931,6 @@ int main(int argc, char **argv) {
 
 	if (debug) {
 		printf("Cntlm debug trace, version " VERSION);
-#ifdef __CYGWIN__
-		printf(" windows/cygwin port");
-#endif
 		printf(".\nCommand line: ");
 		for (i = 0; i < argc; ++i)
 			printf("%s ", argv[i]);
@@ -961,9 +958,9 @@ int main(int argc, char **argv) {
 	/*
 	 * No configuration file yet? Load the default.
 	 */
-#ifdef SYSCONFDIR
+#if defined(SYSCONFDIR) || defined(_WIN32)
 	if (!cf) {
-#ifdef __CYGWIN__
+#ifdef _WIN32
 		tmp = getenv("PROGRAMFILES(X86)");
 		if (tmp == NULL || strlen(tmp) == 0)
 			tmp = getenv("PROGRAMFILES");
