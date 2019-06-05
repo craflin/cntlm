@@ -44,6 +44,7 @@ if(MSVC)
         win32/arpa/inet.h
         win32/netinet/in.h
         win32/sys/select.h
+        win32/sys/socket.cpp
         win32/sys/socket.h
         win32/sys/time.h
         win32/fnmatch.cpp
