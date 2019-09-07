@@ -2,6 +2,9 @@
 find_program(GZIP_EXECUTABLE
     NAMES gzip
 )
+if(NOT GZIP_EXECUTABLE)
+    return()
+endif()
 
 add_custom_target(manpage ALL
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/cntlm.1.gz"
