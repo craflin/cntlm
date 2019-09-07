@@ -86,3 +86,4 @@ foreach(file ${sources})
     source_group("${dir}" FILES ${file})
 endforeach()
 
+install(TARGETS cntlm DESTINATION usr/sbin)
