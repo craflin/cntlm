@@ -153,15 +153,6 @@ the system logger.
 
 .ne 6
 .TP
-.B -G <pattern>\ \ \ \ (ISAScannerAgent)
-User-Agent matching (case insensitive) for trans-isa-scan plugin (see \fB-S\fP for explanation). Positive
-match identifies requests (applications) for which the plugin should be enabled without considering the size
-of the download (see \fB-S\fP). You can use shell wildcard characters, namely "*", "?" and "[]". If used
-without \fB-S\fP or \fBISAScannerSize\fP, the \fImax_size_in_kb\fP is internally set to infinity, so the
-plugin will be active ONLY for selected User-Agents, regardless of download size.
-
-.ne 6
-.TP
 .B -g\ \ \ \ (Gateway)
 Gateway mode, \fBcntlm\fP listens on all network interfaces. Default is to bind just loopback. That way, only
 local processes can connect to \fBcntlm\fP. In the gateway mode though, \fBcntlm\fP listens on all interfaces
@@ -279,47 +270,6 @@ If SOCKS5 proxy is enabled, this option can make it accessible only to those who
 It can be used several times, to create a whole list of accounts (allowed user:pass combinations).
 
 .TP
-.B -S <max_size_in_kb>\ \ \ \ (ISAScannerSize)
-Enables the plugin for transparent handling of the dreaded ISA AV scanner, which returns an interactive HTTP
-page (displaying the scanning progress) instead of the file/data you've requested, every time it feels like
-scanning the contents. This presumptuous behavior breaks every automated downloader, updater and basically
-EVERY application relying on downloads (e.g. wget, apt-get).
-
-.ne 6
-The parameter \fImax_size_in_kb\fP allows you to choose maximum download size you wish to handle by the plugin
-(see below why you might want that). If the file size is bigger than this, \fBcntlm\fP forwards you the
-interactive page, effectively disabling the plugin for that download. Zero means no limit. Use
-\fB-G\fP/\fBISAScannerAgent\fP to identify applications for which \fImax_size_in_kb\fP should be ignored
-(forcing the plugin). It works by matching User-Agent header and is necessary for e.g. wget, apt-get and yum,
-which would fail if the response is some HTTP page instead of requested data.
-
-.ne 8
-How it works: the client asks for a file, \fBcntlm\fP detects ISA's bullshit response and waits for the secret
-link to ISA's cache, which comes no sooner than the file is downloaded and scanned by ISA. Only then can
-\fBcntlm\fP make the second request for the real file and forward it along with correct headers to the client.
-The client doesn't timeout while waiting for it, b/c \fBcntlm\fP is periodically sending an extra "keepalive"
-header, but the user might get nervous not seeing the progress bar move. It's of course \fBpurely
-psychological\fP matter, there's no difference if \fBcntlm\fP or your browser requests the scanned file - you
-must wait for ISA to do it's job and download then. You just expect to see some progress indicator move, which
-is all what the ISA's page does: it shows HTML countdown.
-
-.ne 2
-If the plugin cannot parse the interactive page for some reason (unknown formatting, etc.), it quits and the
-page is forwarded to you - it's never "lost".
-
-.ne 6
-The keepalive header is called \fCISA-Scanner\fP and shows ISA's progress, e.g.:
-.nf
-.ft C
-
-    HTTP/1.1 200 OK
-    ISA-Scanner: 1000 of 10000
-    ISA-Scanner: 2000 of 10000
-    ...
-.ft P
-.fi
-
-.TP
 .B -r \fB"<name>: <value>"\fP\ \ \ \ (Header)
 Header substitution. Every client's request will be processed and any headers defined using \fB-r\fP or in the
 configuration file will be added to it. In case the header is already present, its value will be replaced.
@@ -403,18 +353,6 @@ applies the same to all tunnels.
 .TP
 .B Header <headername: value>
 Header substitution. See \fB-r\fP for details and remember, no quoting.
-
-.ne 4
-.TP
-.B ISAScannerAgent <pattern>
-Wildcard-enabled (*, ?, []) case insensitive User-Agent string matching for the trans-isa-plugin. If you don't
-define \fBISAScannerSize\fP, it is internally set to infinity, i.e. disabling the plugin for all downloads
-except those agent-matched ones. See \fB-G\fP.
-
-.ne 2
-.TP
-.B ISAScannerSize <max_size_in_kb>
-Enable trans-isa-scan plugin. See \fB-S\fP for more.
 
 .ne 2
 .TP
