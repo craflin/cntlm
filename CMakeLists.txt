@@ -21,5 +21,6 @@ set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/src/debian/p
 
 include(CPack)
 
-install(FILES etc/cntlm.conf etc/default/cntlm DESTINATION etc)
+install(FILES etc/cntlm.conf DESTINATION etc)
+install(FILES etc/default/cntlm DESTINATION etc/default)
 install(PROGRAMS etc/init.d/cntlm DESTINATION etc/init.d)
