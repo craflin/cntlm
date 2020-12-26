@@ -71,6 +71,7 @@ config_t config_open(const char *fname) {
 		 * Find first non-empty character
 		 */
 		for (i = j = 0; j < len && isspace(buf[j]); ++j);
+		(void)i;
 
 		/*
 		 * Comment?
@@ -110,6 +111,7 @@ config_t config_open(const char *fname) {
 		 * Find next non-empty character
 		 */
 		for (i = j; j < len && isspace(buf[j]); ++j);
+		(void)i;
 		if (j >= len || buf[j] == '#' || buf[j] == ';')
 			continue;
 

@@ -857,6 +857,7 @@ int hmac_md5 (const void *key, size_t keylen, const void *in, size_t inlen, void
 
       md5_init_ctx (&keyhash);
       md5_process_bytes (key, keylen, &keyhash);
+      memset(optkeybuf, 0, sizeof(optkeybuf));
       md5_finish_ctx (&keyhash, optkeybuf);
 
       key = optkeybuf;

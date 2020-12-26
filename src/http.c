@@ -236,7 +236,7 @@ int headers_recv(int fd, rr_data_t data) {
 				data->port = 80;
 		}
 
-		if (!strlen(data->hostname) || !data->port) {
+		if (!data->hostname || !strlen(data->hostname) || !data->port) {
 			i = -5;
 			goto bailout;
 		}
@@ -413,8 +413,10 @@ int chunked_data_send(int dst, int src) {
 			return 0;
 		}
 
-		if (dst >= 0)
+		if (dst >= 0) {
 			i = so_write(dst, buf, strlen(buf));
+			(void)i;
+		}
 
 		if (csize)
 			if (!data_send(dst, src, csize+2)) {
@@ -428,6 +430,7 @@ int chunked_data_send(int dst, int src) {
 
 	/* Take care of possible trailer */
 	w = len = i = 0;
+	(void)i;
 	do {
 		i = so_recvln(src, &buf, &bsize);
 		if (dst >= 0 && i > 0) {
@@ -472,6 +475,7 @@ int tunnel(int cd, int sd) {
 			ret = so_read(from, buf, BUFSIZE);
 			if (ret > 0) {
 				ret = so_write(to, buf, ret);
+				(void)ret;
 			} else {
 				free(buf);
 				return (ret == 0);
@@ -507,7 +511,7 @@ length_t http_has_body(rr_data_t request, rr_data_t response) {
 	 * server if the request was HEAD or reply is 1xx, 204 or 304.
 	 * No body can be in GET request if direction is from client.
 	 */
-	if (current == response) {
+	if (current == response && response) {
 		nobody = (HEAD(request) ||
 			(response->code >= 100 && response->code < 200) ||
 			response->code == 204 ||
@@ -526,8 +530,8 @@ length_t http_has_body(rr_data_t request, rr_data_t response) {
 	 *
 	 * No C-L, no T-E, no C-T == no body.
 	 */
-	tmp = hlist_get(current->headers, "Content-Length");
-	if (!nobody && tmp == NULL && (hlist_in(current->headers, "Content-Type")
+	tmp = current ? hlist_get(current->headers, "Content-Length") : NULL;
+	if (!nobody && tmp == NULL && current && (hlist_in(current->headers, "Content-Type")
 			|| hlist_in(current->headers, "Transfer-Encoding")
 			|| hlist_subcmp(current->headers, "Connection", "close"))) {
 			// || (response->code == 200) 

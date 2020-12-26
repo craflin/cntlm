@@ -341,6 +341,7 @@ rr_data_t forward_request(void *thread_data, rr_data_t request) {
 
 beginning:
 	sd = was_cached = noauth = authok = conn_alive = proxy_alive = 0;
+	(void)conn_alive;
 
 	rsocket[0] = wsocket[1] = &cd;
 	rsocket[1] = wsocket[0] = &sd;
@@ -365,7 +366,7 @@ beginning:
 	pthread_mutex_unlock(&connection_mtx);
 	if (i) {
 		if (debug)
-			printf("Found autenticated connection %d!\n", i);
+			printf("Found authenticated connection %d!\n", i);
 		sd = i;
 		authok = 1;
 		was_cached = 1;
@@ -375,6 +376,7 @@ beginning:
 		if (sd < 0) {
 			tmp = gen_502_page(request->http, "Parent proxy unreacheable");
 			i = so_write(cd, tmp, strlen(tmp));
+			(void)i;
 			free(tmp);
 			rc = (void *)-1;
 			goto bailout;
@@ -490,6 +492,7 @@ shortcut:
 
 					tmp = gen_407_page(data[loop]->http);
 					i = so_write(cd, tmp, strlen(tmp));
+					(void)i;
 					free(tmp);
 
 					free_rr_data(data[0]);

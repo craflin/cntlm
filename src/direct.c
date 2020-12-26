@@ -162,8 +162,10 @@ int www_authenticate(int sd, rr_data_t request, rr_data_t response, struct auth_
 		hlist_dump(auth->headers);
 
 bailout:
-	if (rc)
+	if (rc) {
 		response = copy_rr_data(response, auth);
+		(void)response;
+	}
 	free_rr_data(auth);
 	free(buf);
 
@@ -192,8 +194,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 		syslog(LOG_WARNING, "Connection failed for %s:%d (%s)", request->hostname, request->port, so_strerror(so_errno));
 		tmp = gen_502_page(request->http, so_strerror(so_errno));
 		w = so_write(cd, tmp, strlen(tmp));
-		// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
-		if (!w) w = 1;
+		(void)w;
 		free(tmp);
 
 		rc = (void *)-1;
@@ -212,6 +213,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 	} else {
 		tmp = gen_502_page(request->http, "Invalid request URL");
 		w = so_write(cd, tmp, strlen(tmp));
+		(void)w;
 		free(tmp);
 
 		rc = (void *)-1;
@@ -334,6 +336,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 					if (sd < 0) {
 						tmp = gen_502_page(data[0]->http, "WWW authentication reconnect failed");
 						w = so_write(cd, tmp, strlen(tmp));
+						(void)w;
 						free(tmp);
 
 						rc = (void *)-1;
@@ -346,6 +349,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 
 					tmp = gen_502_page(data[1]->http, data[1]->errmsg ? data[1]->errmsg : "Error during WWW-Authenticate");
 					w = so_write(cd, tmp, strlen(tmp));
+					(void)w;
 					free(tmp);
 
 					free_rr_data(data[0]);
@@ -360,6 +364,7 @@ rr_data_t direct_request(void *cdata, rr_data_t request) {
 					 */
 					tmp = gen_401_page(data[1]->http, data[0]->hostname, data[0]->port);
 					w = so_write(cd, tmp, strlen(tmp));
+					(void)w;
 					free(tmp);
 
 					free_rr_data(data[0]);

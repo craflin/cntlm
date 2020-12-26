@@ -149,6 +149,7 @@ int parent_add(char *parent, int port) {
 		syslog(LOG_ERR, "Invalid proxy specification %s.\n", parent);
 		free(proxy);
 		myexit(1);
+		return 0;
 	}
 
 	/*
@@ -315,6 +316,7 @@ void *proxy_thread(void *thread_data) {
 	do {
 		ret = NULL;
 		keep_alive = 0;
+		(void)keep_alive;
 
 		if (debug) {
 			printf("\n******* Round 1 C: %d *******\n", cd);
@@ -459,13 +461,13 @@ void *socks5_thread(void *thread_data) {
 		bs[0] = 5;
 		bs[1] = 0xFF;
 		w = so_write(cd, bs, 2);
-		// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
-		if (!w) w = 1;
+		(void)w;
 		goto bailout;
 	} else {
 		bs[0] = 5;
 		bs[1] = found;
 		w = so_write(cd, bs, 2);
+		(void)w;
 	}
 
 	/*
@@ -480,6 +482,7 @@ void *socks5_thread(void *thread_data) {
 			bs[0] = 1;
 			bs[1] = 0xFF;		/* Unsuccessful (not supported) */
 			w = so_write(cd, bs, 2);
+			(void)w;
 			goto bailout;
 		}
 		c = bs[1];
@@ -525,6 +528,7 @@ void *socks5_thread(void *thread_data) {
 		 * Send response
 		 */
 		w = so_write(cd, bs, 2);
+		(void)w;
 		free(upass);
 		free(uname);
 
@@ -552,6 +556,7 @@ void *socks5_thread(void *thread_data) {
 		bs[3] = 1;			/* Dummy IPv4 */
 		memset(bs+4, 0, 6);
 		w = so_write(cd, bs, 10);
+		(void)w;
 		goto bailout;
 	}
 
@@ -620,6 +625,7 @@ void *socks5_thread(void *thread_data) {
 		bs[3] = 1;			/* Dummy IPv4 */
 		memset(bs+4, 0, 6);
 		w = so_write(cd, bs, 10);
+		(void)w;
 		goto bailout;
 	} else {
 		/*
@@ -631,6 +637,7 @@ void *socks5_thread(void *thread_data) {
 		bs[3] = 1;			/* Dummy IPv4 */
 		memset(bs+4, 0, 6);
 		w = so_write(cd, bs, 10);
+		(void)w;
 	}
 
 	syslog(LOG_DEBUG, "%s SOCKS %s", inet_ntoa(caddr.sin_addr), thost);
@@ -695,7 +702,7 @@ int main(int argc, char **argv) {
 	config_t cf = NULL;
 	char *magic_detect = NULL;
 
-	g_creds = new_auth();
+	struct auth_s *creds = g_creds = new_auth();
 	cuser = new(MINIBUF_SIZE);
 	cdomain = new(MINIBUF_SIZE);
 	cpassword = new(MINIBUF_SIZE);
@@ -739,7 +746,7 @@ int main(int argc, char **argv) {
 				strlcpy(cdomain, optarg, MINIBUF_SIZE);
 				break;
 			case 'F':
-				cflags = swap32(strtoul(optarg, &tmp, 0));
+				cflags = swap32(strtoul(optarg, NULL, 0));
 				break;
 #ifndef _WIN32
 			case 'f':
@@ -772,7 +779,8 @@ int main(int argc, char **argv) {
 				magic_detect = strdup(optarg);
 				break;
 			case 'N':
-				noproxy_list = noproxy_add(noproxy_list, tmp=strdup(optarg));
+				tmp = strdup(optarg);
+				noproxy_list = noproxy_add(noproxy_list, tmp);
 				free(tmp);
 				break;
 			case 'O':
@@ -802,6 +810,7 @@ int main(int argc, char **argv) {
 					users_list = hlist_add(users_list, tmp, head+1,
 						HLIST_ALLOC, HLIST_ALLOC);
 				}
+				free(tmp);
 				break;
 			case 'r':
 				if (is_http_header(optarg))
@@ -1105,6 +1114,7 @@ int main(int argc, char **argv) {
 				head[0] = 0;
 				users_list = hlist_add(users_list, tmp, head+1, HLIST_ALLOC, HLIST_ALLOC);
 			}
+			free(tmp);
 		}
 
 		/*
@@ -1141,25 +1151,25 @@ int main(int argc, char **argv) {
 	 */
 	if (strlen(cauth)) {
 		if (!strcasecmp("ntlm", cauth)) {
-			g_creds->hashnt = 1;
-			g_creds->hashlm = 1;
-			g_creds->hashntlm2 = 0;
+			creds->hashnt = 1;
+			creds->hashlm = 1;
+			creds->hashntlm2 = 0;
 		} else if (!strcasecmp("nt", cauth)) {
-			g_creds->hashnt = 1;
-			g_creds->hashlm = 0;
-			g_creds->hashntlm2 = 0;
+			creds->hashnt = 1;
+			creds->hashlm = 0;
+			creds->hashntlm2 = 0;
 		} else if (!strcasecmp("lm", cauth)) {
-			g_creds->hashnt = 0;
-			g_creds->hashlm = 1;
-			g_creds->hashntlm2 = 0;
+			creds->hashnt = 0;
+			creds->hashlm = 1;
+			creds->hashntlm2 = 0;
 		} else if (!strcasecmp("ntlmv2", cauth)) {
-			g_creds->hashnt = 0;
-			g_creds->hashlm = 0;
-			g_creds->hashntlm2 = 1;
+			creds->hashnt = 0;
+			creds->hashlm = 0;
+			creds->hashntlm2 = 1;
 		} else if (!strcasecmp("ntlm2sr", cauth)) {
-			g_creds->hashnt = 2;
-			g_creds->hashlm = 0;
-			g_creds->hashntlm2 = 0;
+			creds->hashnt = 2;
+			creds->hashlm = 0;
+			creds->hashntlm2 = 0;
 		} else {
 			syslog(LOG_ERR, "Unknown NTLM auth combination.\n");
 			myexit(1);
@@ -1171,11 +1181,11 @@ int main(int argc, char **argv) {
 
 	if (!magic_detect)
 		syslog(LOG_INFO, "Using following NTLM hashes: NTLMv2(%d) NT(%d) LM(%d)\n",
-			g_creds->hashntlm2, g_creds->hashnt, g_creds->hashlm);
+			creds->hashntlm2, creds->hashnt, creds->hashlm);
 
 	if (cflags) {
 		syslog(LOG_INFO, "Using manual NTLM flags: 0x%X\n", swap32(cflags));
-		g_creds->flags = cflags;
+		creds->flags = cflags;
 	}
 
 	/*
@@ -1200,7 +1210,7 @@ int main(int argc, char **argv) {
 				syslog(LOG_ERR, "Invalid PassNTLMv2 hash, terminating\n");
 				exit(1);
 			}
-			auth_memcpy(g_creds, passntlm2, tmp, 16);
+			auth_memcpy(creds, passntlm2, tmp, 16);
 			free(tmp);
 		}
 		if (strlen(cpassnt)) {
@@ -1209,7 +1219,7 @@ int main(int argc, char **argv) {
 				syslog(LOG_ERR, "Invalid PassNT hash, terminating\n");
 				exit(1);
 			}
-			auth_memcpy(g_creds, passnt, tmp, 16);
+			auth_memcpy(creds, passnt, tmp, 16);
 			free(tmp);
 		}
 		if (strlen(cpasslm)) {
@@ -1218,29 +1228,29 @@ int main(int argc, char **argv) {
 				syslog(LOG_ERR, "Invalid PassLM hash, terminating\n");
 				exit(1);
 			}
-			auth_memcpy(g_creds, passlm, tmp, 16);
+			auth_memcpy(creds, passlm, tmp, 16);
 			free(tmp);
 		}
 	} else {
-		if (g_creds->hashnt || magic_detect || interactivehash) {
+		if (creds->hashnt || magic_detect || interactivehash) {
 			tmp = ntlm_hash_nt_password(cpassword);
-			auth_memcpy(g_creds, passnt, tmp, 21);
+			auth_memcpy(creds, passnt, tmp, 21);
 			free(tmp);
-		} if (g_creds->hashlm || magic_detect || interactivehash) {
+		} if (creds->hashlm || magic_detect || interactivehash) {
 			tmp = ntlm_hash_lm_password(cpassword);
-			auth_memcpy(g_creds, passlm, tmp, 21);
+			auth_memcpy(creds, passlm, tmp, 21);
 			free(tmp);
-		} if (g_creds->hashntlm2 || magic_detect || interactivehash) {
+		} if (creds->hashntlm2 || magic_detect || interactivehash) {
 			tmp = ntlm2_hash_password(cuser, cdomain, cpassword);
-			auth_memcpy(g_creds, passntlm2, tmp, 16);
+			auth_memcpy(creds, passntlm2, tmp, 16);
 			free(tmp);
 		}
 		memset(cpassword, 0, strlen(cpassword));
 	}
 
-	auth_strcpy(g_creds, user, cuser);
-	auth_strcpy(g_creds, domain, cdomain);
-	auth_strcpy(g_creds, workstation, cworkstation);
+	auth_strcpy(creds, user, cuser);
+	auth_strcpy(creds, domain, cdomain);
+	auth_strcpy(creds, workstation, cworkstation);
 
 	free(cuser);
 	free(cdomain);
@@ -1261,22 +1271,22 @@ int main(int argc, char **argv) {
 	}
 
 	if (interactivehash) {
-		if (g_creds->passlm) {
-			tmp = printmem(g_creds->passlm, 16, 8);
+		if (creds->passlm) {
+			tmp = printmem(creds->passlm, 16, 8);
 			printf("PassLM          %s\n", tmp);
 			free(tmp);
 		}
 
-		if (g_creds->passnt) {
-			tmp = printmem(g_creds->passnt, 16, 8);
+		if (creds->passnt) {
+			tmp = printmem(creds->passnt, 16, 8);
 			printf("PassNT          %s\n", tmp);
 			free(tmp);
 		}
 
-		if (g_creds->passntlm2) {
-			tmp = printmem(g_creds->passntlm2, 16, 8);
+		if (creds->passntlm2) {
+			tmp = printmem(creds->passntlm2, 16, 8);
 			printf("PassNTLMv2      %s    # Only for user '%s', domain '%s'\n",
-				tmp, g_creds->user, g_creds->domain);
+				tmp, creds->user, creds->domain);
 			free(tmp);
 		}
 		goto bailout;
@@ -1286,9 +1296,9 @@ int main(int argc, char **argv) {
 	 * If we're going to need a password, check we really have it.
 	 */
 	if (!ntlmbasic && (
-			(g_creds->hashnt && !g_creds->passnt)
-		     || (g_creds->hashlm && !g_creds->passlm)
-		     || (g_creds->hashntlm2 && !g_creds->passntlm2))) {
+			(creds->hashnt && !creds->passnt)
+		     || (creds->hashlm && !creds->passlm)
+		     || (creds->hashntlm2 && !creds->passntlm2))) {
 		syslog(LOG_ERR, "Parent proxy account password (or required hashes) missing.\n");
 		myexit(1);
 	}
@@ -1314,6 +1324,7 @@ int main(int argc, char **argv) {
 		setsid();
 		umask(0);
 		w = chdir("/");
+		(void)w;
 		i = open("/dev/null", O_RDWR);
 		if (i >= 0) {
 			dup2(i, 0);
@@ -1357,12 +1368,14 @@ int main(int argc, char **argv) {
 				if (!pw || !pw->pw_uid) {
 					syslog(LOG_ERR, "Username %s in -U is invalid\n", cuid);
 					myexit(1);
+					return 1;
 				}
 				nuid = pw->pw_uid;
 				ngid = pw->pw_gid;
 			}
-			setgid(ngid);
-			i = setuid(nuid);
+			i = setgid(ngid);
+			if (!i)
+				i = setuid(nuid);
 			syslog(LOG_INFO, "Changing uid:gid to %d:%d - %s\n", nuid, ngid, strerror(errno));
 			if (i) {
 				syslog(LOG_ERR, "Terminating\n");
@@ -1504,8 +1517,7 @@ int main(int argc, char **argv) {
 						inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port));
 					tmp = gen_denied_page(inet_ntoa(caddr.sin_addr));
 					w = so_write(cd, tmp, strlen(tmp));
-					// We don't really care about the result - shut up GCC warning (unused-but-set-variable)
-					if (!w) w = 1;
+					(void)w;
 					free(tmp);
 					so_close(cd);
 					continue;
@@ -1592,7 +1604,8 @@ bailout:
 	free(cuid);
 	free(cpidfile);
 	free(magic_detect);
-	free(g_creds);
+	g_creds = NULL;
+	free(creds);
 
 	plist_free(parent_list);
 
