@@ -112,8 +112,10 @@ config_t config_open(const char *fname) {
 		 */
 		for (i = j; j < len && isspace(buf[j]); ++j);
 		(void)i;
-		if (j >= len || buf[j] == '#' || buf[j] == ';')
+		if (j >= len || buf[j] == '#' || buf[j] == ';') {
+			free(key);
 			continue;
+		}
 
 		/*
 		 * Is value quoted?
@@ -121,8 +123,10 @@ config_t config_open(const char *fname) {
 		if (buf[j] == '"') {
 			quote = 1;
 			for (i = ++j; j < len && buf[i] != '"'; ++i);
-			if (i >= len)
+			if (i >= len) {
+				free(key);
 				continue;
+			}
 		} else
 			i = len;
 

@@ -111,7 +111,7 @@ int proxy_connect(struct auth_s *credentials) {
 		pthread_mutex_unlock(&connection_mtx);
 	}
 
-	if (i > 0 && credentials != NULL)
+	if (i >= 0 && credentials != NULL)
 		copy_auth(credentials, g_creds, /* fullcopy */ !ntlmbasic);
 
 	return i;
@@ -233,6 +233,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 			challenge = new(strlen(tmp) + 5 + 1);
 			len = from_base64(challenge, tmp + 5);
 			if (len > NTLM_CHALLENGE_MIN) {
+				tmp = NULL;
 				len = ntlm_response(&tmp, challenge, len, credentials);
 				if (len > 0) {
 					strcpy(buf, "NTLM ");
@@ -242,6 +243,7 @@ int proxy_authenticate(int *sd, rr_data_t request, rr_data_t response, struct au
 				} else {
 					syslog(LOG_ERR, "No target info block. Cannot do NTLMv2!\n");
 					free(challenge);
+					free(tmp);
 					so_close(*sd);
 					goto bailout;
 				}
@@ -374,7 +376,7 @@ beginning:
 		tcreds = new_auth();
 		sd = proxy_connect(tcreds);
 		if (sd < 0) {
-			tmp = gen_502_page(request->http, "Parent proxy unreacheable");
+			tmp = gen_502_page(request->http, "Parent proxy unreachable");
 			i = so_write(cd, tmp, strlen(tmp));
 			(void)i;
 			free(tmp);
@@ -685,7 +687,8 @@ bailout:
 		pthread_mutex_unlock(&connection_mtx);
 	} else {
 		free(tcreds);
-		so_close(sd);
+		if (sd >= 0)
+			so_close(sd);
 	}
 
 	return rc;
@@ -793,7 +796,8 @@ void forward_tunnel(void *thread_data) {
 		tunnel(cd, sd);
 
 bailout:
-	so_close(sd);
+	if (sd >= 0)
+		so_close(sd);
 	so_close(cd);
 	free(tcreds);
 
@@ -832,6 +836,7 @@ void magic_auth_detect(const char *url) {
 		host = substr(pos+3, 0, tmp ? tmp-pos-3 : 0);
 	} else {
 		fprintf(stderr, "Invalid URL (%s)\n", url);
+		free(tcreds);
 		return;
 	}
 
@@ -855,7 +860,7 @@ void magic_auth_detect(const char *url) {
 		printf("Config profile %2d/%d... ", i+1, MAGIC_TESTS);
 
 		nc = proxy_connect(NULL);
-		if (nc <= 0) {
+		if (nc < 0) {
 			printf("\nConnection to proxy failed, bailing out\n");
 			free_rr_data(res);
 			free_rr_data(req);

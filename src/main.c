@@ -203,7 +203,7 @@ void listen_add(const char *service, plist_t *list, char *spec, int gateway) {
 	}
 
 	i = so_listen(port, source);
-	if (i > 0) {
+	if (i >= 0) {
 		*list = plist_add(*list, i, NULL);
 		syslog(LOG_INFO, "%s listening on %s:%d\n", service, inet_ntoa(source), port);
 	}
@@ -255,7 +255,7 @@ void tunnel_add(plist_t *list, char *spec, int gateway) {
 		strcat(tmp, field[pos+2]);
 
 		i = so_listen(port, source);
-		if (i > 0) {
+		if (i >= 0) {
 			*list = plist_add(*list, i, tmp);
 			syslog(LOG_INFO, "New tunnel from %s:%d to %s\n", inet_ntoa(source), port, tmp);
 		} else
@@ -568,14 +568,16 @@ void *socks5_thread(void *thread_data) {
 		ver = 1;			/* IPv4, we know the length */
 		c = 4;
 	} else if (bs[3] == 3) {
+		uint8_t string_length;
 		ver = 2;			/* FQDN, get string length */
-		r = so_read(cd, &c, 1);
+		r = so_read(cd, &string_length, 1);
 		if (r != 1)
 			goto bailout;
+		c = string_length;
 	} else
 		goto bailout;
 
-	addr = (unsigned char *)new(c+10 + 1);
+	addr = (unsigned char *)new(c + 10 + 1);
 	r = so_read(cd, addr, c);
 	if (r != c)
 		goto bailout;
@@ -660,7 +662,7 @@ bailout:
 		free(bs);
 	if (tcreds)
 		free(tcreds);
-	if (sd)
+	if (sd >= 0)
 		so_close(sd);
 	so_close(cd);
 
@@ -910,7 +912,7 @@ int main(int argc, char **argv) {
 		fprintf(stderr, "\t-M  <testurl>\n"
 				"\t    Magic autodetection of proxy's NTLM dialect.\n");
 		fprintf(stderr, "\t-N  \"<hostname_wildcard1>[, <hostname_wildcardN>\"\n"
-				"\t    List of URL's to serve direcly as stand-alone proxy (e.g. '*.local')\n");
+				"\t    List of URL's to serve directly as stand-alone proxy (e.g. '*.local')\n");
 		fprintf(stderr, "\t-O  [<saddr>:]<lport>\n"
 				"\t    Enable SOCKS5 proxy on port lport (binding to address saddr)\n");
 #ifndef _WIN32
@@ -1324,7 +1326,9 @@ int main(int argc, char **argv) {
 		setsid();
 		umask(0);
 		w = chdir("/");
-		(void)w;
+		if(w != 0) {
+			perror("chdir(\"/\") failed");
+		}
 		i = open("/dev/null", O_RDWR);
 		if (i >= 0) {
 			dup2(i, 0);
@@ -1572,7 +1576,7 @@ int main(int argc, char **argv) {
 				if (!tid) {
 					tj++;
 					if (debug)
-						printf("Joining thread %lu; rc: %d\n", t->key, i);
+						printf("Joined thread %lu; rc: %d\n", t->key, i);
 				} else
 					syslog(LOG_ERR, "Serious error during pthread_join: %d\n", tid);
 

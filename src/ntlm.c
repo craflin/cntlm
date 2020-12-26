@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include "ntlm.h"
 #include "swap.h"

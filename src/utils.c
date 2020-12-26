@@ -43,7 +43,7 @@ int hexindex[128] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
 
 void myexit(int rc) {
 	if (rc)
-		fprintf(stderr, "Exitting with error. Check daemon logs or run with -v.\n");
+		fprintf(stderr, "Exiting with error. Check daemon logs or run with -v.\n");
 	
 	exit(rc);
 }
@@ -441,7 +441,7 @@ int hlist_subcmp_all(hlist_t list, const char *key, const char *substr) {
 
 /*
  * Free the list. For more about list memory management,
- * se hlist_add.
+ * see hlist_add.
  */
 hlist_t hlist_free(hlist_t list) {
 	hlist_t t = list;
@@ -572,7 +572,7 @@ rr_data_t dup_rr_data(rr_data_t data) {
 }
 
 /*
- * Reset, freeing if neccessary
+ * Reset, freeing if necessary
  */
 rr_data_t reset_rr_data(rr_data_t data) {
 	if (data == NULL)
@@ -700,14 +700,10 @@ size_t strlcat(char *dst, const char *src, size_t siz) {
 }
 
 /*
- * Shortcut for malloc/memset zero.
+ * Allocates memory and makes sure it is zero initialized.
  */
 char *new(size_t size) {
-	char *tmp;
-
-	tmp = malloc(size);
-	memset(tmp, 0, size);
-
+	char *tmp = calloc(1, size);
 	return tmp;
 }
 
@@ -860,7 +856,7 @@ void to_base64(unsigned char *out, const unsigned char *in, size_t len, size_t o
 		*out++ = base64[in[0] >> 2];
 		fragment = (in[0] << 4) & 0x30;
 		if (len > 1)
-		fragment |= in[1] >> 4;
+			fragment |= in[1] >> 4;
 		*out++ = base64[fragment];
 		*out++ = (len < 2) ? '=' : base64[(in[1] << 2) & 0x3c];
 		*out++ = '=';

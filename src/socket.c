@@ -124,7 +124,6 @@ int so_listen(int port, struct in_addr source) {
 	if (fd < 0) {
 		if (debug)
 			printf("so_listen: new socket: %s\n", so_strerror(so_errno));
-		so_close(fd);
 		return -1;
 	}
 
@@ -196,7 +195,7 @@ int so_closed(int fd) {
 #ifdef _WIN32
 	return (i == 0 || (i == -1 && so_errno != WSAEWOULDBLOCK));
 #else
-	return (i == 0 || (i == -1 && so_errno != EAGAIN && so_errno != ENOENT));   /* ENOENT, you ask? Perhap AIX devels could explain! :-( */
+	return (i == 0 || (i == -1 && so_errno != EAGAIN && so_errno != ENOENT));   /* ENOENT, you ask? Perhaps AIX devels could explain! :-( */
 #endif
 }
 
