@@ -624,6 +624,29 @@ shortcut:
 				}
 			}
 
+			//if (plugin & PLUG_SENDHEAD) {
+				if (debug) {
+					printf("Sending headers (%d)...\n", *wsocket[loop]);
+					if (loop == 0) {
+						printf("HEAD: %s %s %s\n", data[loop]->method, data[loop]->url, data[loop]->http);
+						hlist_dump(data[loop]->headers);
+					}
+				}
+
+				/*
+				 * Forward client's headers to the proxy and vice versa; proxy_authenticate()
+				 * might have by now prepared 1st and 2nd auth steps and filled our headers with
+				 * the 3rd, final, NTLM message.
+				 */
+				if (!headers_send(*wsocket[loop], data[loop])) {
+					free_rr_data(data[0]);
+					free_rr_data(data[1]);
+					rc = (void *)-1;
+					/* error page */
+					goto bailout;
+				}
+			//}
+
 			/*
 			 * Was the request CONNECT and proxy agreed?
 			 */
@@ -637,6 +660,15 @@ shortcut:
 				rc = (void *)-1;
 				goto bailout;
 			}
+
+			//if (plugin & PLUG_SENDDATA) {
+				if (!http_body_send(*wsocket[loop], *rsocket[loop], data[0], data[1])) {
+					free_rr_data(data[0]);
+					free_rr_data(data[1]);
+					rc = (void *)-1;
+					goto bailout;
+				}
+			//}
 
 			/*
 			 * Proxy-Connection: keep-alive is taken care of in our caller as I said,
